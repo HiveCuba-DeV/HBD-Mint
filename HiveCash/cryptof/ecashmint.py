@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 import json
 
 # from hiveManager.hiveuri import genb64U, recb64U
-from HiveCash.hiveManager.hiveDrive import existHiveAcount, transferHBD, averifytransactE
+from HiveCash.hiveManager.hiveDrive import existHiveAcount, transferHBD, averifytransactE, aVerifyTransMemo
 from HiveCash.tools.checkhex import checkhex
 from HiveCash.tools.hashstr import getUMsgHash
 from HiveCash.hiveManager.reqDeposit import regDeposit
@@ -81,9 +81,6 @@ class EcashMint:
         if await isMinted(secret_hash.hex()):
             raise ValueError("Already Minted")
 
-        if not await newToken(secret_hash.hex(), amount):
-            raise ValueError("BD Fail")
-
         signature = self._sign(secret_hash)
         uri, memo = regDeposit(secret_hash.hex(), amount)
         return signature, uri, memo
@@ -108,7 +105,17 @@ class EcashMint:
 
     async def mint_check_deposit(self, secret_hash: bytes):
         tdata = await getToken(secret_hash.hex())
+        memo = getUMsgHash(secret_hash.hex())
         if not tdata:  # For unmint
+            amount = aVerifyTransMemo(memo)
+            if amount != 0:
+                try:
+                    if not await newToken(secret_hash.hex(), amount):
+                        raise ValueError("BD Fail")
+                    await updateToken(secret_hash.hex(), {"status": "payed"})
+                except:
+                    return False
+                return True
             return False
         if len(hdbmint_columnsnames) != len(tdata[0]):
             return False
@@ -116,8 +123,7 @@ class EcashMint:
         # Only one to onchain
         if dicdata.get('status', "") in ['payed', 'used']:
             return True
-        memo = getUMsgHash(secret_hash.hex())  # For  new
-        # print(f"V-> Hash:{secret_hash.hex()}, Valid memo: {memo}")
+
         amount = int(dicdata.get("amount"))
         sta = await averifytransactE(amount, memo)
         if sta and dicdata.get("status", "") == 'new':
@@ -171,7 +177,7 @@ class EcashMint:
                 insec = token[0] if sversion == 0 else b64spToHex(token[0])
 
                 if not insec == bytes.fromhex(insec).hex():
-                    return False, "Bad Input: incorrect token data"                
+                    return False, "Bad Input: incorrect token data"
 
                 ins = getScryptHash(insec)
                 hashlist.append(ins)
@@ -189,7 +195,7 @@ class EcashMint:
                     return False, "Bad Input: token not founded"
 
                 if status == "used":
-                    return False, "Bad Input: token already used"                
+                    return False, "Bad Input: token already used"
 
                 inAmount += amount
 
