@@ -1,4 +1,4 @@
-# HBD-Mint---
+# HBD-Mint of HiveCash
 
 ## Project overview
 This repository implements the HBD mint service for Hive following an eCash-like protocol adapted to Hive. The service exposes REST endpoints to mint tokens, check deposits, perform internal and external transfers, and provide signatures and the mint public key.
