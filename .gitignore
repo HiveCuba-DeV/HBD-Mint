@@ -14,8 +14,6 @@ src/__pycache__/
 .env.bat
 .env
 .env.json
-db
-db/
 myenv
 static/.DS_Store
 .DS_Store
